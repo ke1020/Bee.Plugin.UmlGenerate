@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:i18n="using:Ke.Bee.Localization.Extensions"
+  xmlns:ctrl="using:Bee.Base.Controls"
+  xmlns:converter="using:Bee.Base.Converters"
+  mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+  x:Class="Bee.Plugin.UmlGenerate.Views.IndexView">
+
+  <UserControl.Resources>
+    <converter:EnumLocalizeConverter x:Key="EnumConverter" />
+  </UserControl.Resources>
+
+  <ctrl:Workspace Title="{i18n:Localize 'Bee.Plugin.UmlGenerate.IndexViewTitle'}"
+    IsPaneOpen="{Binding IsPaneOpen}" PaneToggleCommand="{Binding PaneToggleCommand}">
+
+    <!-- 主工作区 -->
+    <ctrl:Workspace.Content>
+      <ctrl:TaskList DataContext="{Binding TaskList}"
+        ViewComment="{i18n:Localize 'Bee.Plugin.UmlGenerate.ViewComment'}" />
+    </ctrl:Workspace.Content>
+
+    <!-- 参数面板 -->
+    <ctrl:Workspace.Pane>
+      <Border IsVisible="{Binding IsPaneOpen}" BorderThickness="1,0,0,0"
+        BorderBrush="{DynamicResource BorderColor}" Padding="10">
+        <StackPanel>
+          <!-- 生成模式 -->
+          <TextBlock Classes="MT-1"
+            Text="{i18n:Localize 'Bee.Plugin.UmlGenerate.UmlGenerateMode'}" />
+          <ComboBox
+            PlaceholderText="{i18n:Localize 'Bee.Plugin.UmlGenerate.UmlGenerateMode.Placeholder'}"
+            SelectedValue="{Binding TaskList.TaskArguments.GenerateMode, Mode=TwoWay}"
+            SelectionChanged="UmlGenerateMode_SelectionChanged"
+            HorizontalAlignment="Stretch" ItemsSource="{Binding UmlGenerateModes}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock
+                  Text="{Binding, Converter={StaticResource EnumConverter}, ConverterParameter='Bee.Plugin.UmlGenerate.UmlGenerateMode'}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </Border>
+    </ctrl:Workspace.Pane>
+
+  </ctrl:Workspace>
+</UserControl>

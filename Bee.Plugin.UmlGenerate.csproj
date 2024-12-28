@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <CopyToDirectory>C:\Users\ke\dev\proj\avalonia\Bee\Bee\Plugins\UmlGenerate</CopyToDirectory>
+    <!-- 禁用所有默认分析器 -->
+    <AnalysisModeRoslynDiagnosticsDesign>AllDisabledByDefault</AnalysisModeRoslynDiagnosticsDesign>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Bee/Bee.Base/Bee.Base.csproj" />
+  </ItemGroup>
+
+  <Target Name="CopyFilesToDestination" AfterTargets="Build">
+    <ItemGroup>
+      <Source1 Include="i18n\*.*" />
+      <Source2 Include="Configs\*.*" />
+      <FilesToCopy Include="$(OutputPath)**\Bee.Plugin.UmlGenerate.dll" />
+      <FilesToCopy Include="$(OutputPath)**\Bee.Plugin.UmlGenerate.pdb" />
+      <FilesToCopy Include="$(OutputPath)**\Bee.Plugin.UmlGenerate.deps.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(CopyToDirectory)\%(RecursiveDir)" />
+    <Copy SourceFiles="@(Source1)" DestinationFolder="$(CopyToDirectory)\i18n\" />
+    <Copy SourceFiles="@(Source2)" DestinationFolder="$(CopyToDirectory)\Configs\" />
+  </Target>
+
+  <ItemGroup>
+    <!-- 不应隐式捕获主构造函数参数检测 -->
+    <PackageReference Include="Roslyn.Diagnostics.Analyzers"
+      Version="3.11.0-beta1.24527.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
