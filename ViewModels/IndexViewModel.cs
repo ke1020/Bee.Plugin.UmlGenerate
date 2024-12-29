@@ -20,6 +20,21 @@ public partial class IndexViewModel : WorkspaceViewModel
         .Cast<UmlGenerateMode>()
         .Where(e => (int)e > 0)
         ;
+    /// <summary>
+    /// 缩放模式集合
+    /// </summary>
+    public IEnumerable<UmlScaleMode> UmlScaleModes => Enum.GetValues(typeof(UmlScaleMode))
+        .Cast<UmlScaleMode>()
+        .Where(e => (int)e > 0)
+        ;
+    /// <summary>
+    /// 输出格式集合
+    /// </summary>
+    public List<string> OutputFormats => [.. UmlGenerateConsts.AvailableOutputFormats];
+    /// <summary>
+    /// 主题集合
+    /// </summary>
+    public List<string> Themes => [.. UmlGenerateConsts.AvailableThemes];
         
     public IndexViewModel(IServiceProvider serviceProvider, ILocalizer l, TaskListViewModel<UmlGenerateArguments> taskList) : base(serviceProvider, l)
     {

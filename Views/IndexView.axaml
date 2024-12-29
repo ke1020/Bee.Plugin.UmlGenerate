@@ -41,6 +41,46 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
+
+          <!-- 输出格式选择 -->
+          <TextBlock Classes="MT-1"
+            Text="{i18n:Localize 'Bee.Plugin.UmlGenerate.OutputFormat'}" />
+          <ComboBox SelectedValue="{Binding TaskList.TaskArguments.OutputFormat, Mode=TwoWay}"
+            HorizontalAlignment="Stretch" ItemsSource="{Binding OutputFormats}" />
+
+          <!-- 主题选择 -->
+          <TextBlock Classes="MT-1"
+            Text="{i18n:Localize 'Bee.Plugin.UmlGenerate.Theme'}" />
+          <ComboBox SelectedValue="{Binding TaskList.TaskArguments.Theme, Mode=TwoWay}"
+            HorizontalAlignment="Stretch" ItemsSource="{Binding Themes}" />
+
+          <!-- 缩放模式 -->
+          <TextBlock Classes="MT-1"
+            Text="{i18n:Localize 'Bee.Plugin.UmlGenerate.UmlScaleMode'}" />
+          <ComboBox
+            PlaceholderText="{i18n:Localize 'Bee.Plugin.UmlGenerate.UmlScaleMode.Placeholder'}"
+            SelectedValue="{Binding TaskList.TaskArguments.ScaleMode, Mode=TwoWay}"
+            HorizontalAlignment="Stretch" ItemsSource="{Binding UmlScaleModes}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock
+                  Text="{Binding, Converter={StaticResource EnumConverter}, ConverterParameter='Bee.Plugin.UmlGenerate.UmlScaleMode'}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <!-- 缩放值 -->
+          <TextBlock Classes="MT-1"
+            Text="{i18n:Localize 'Bee.Plugin.UmlGenerate.ScaleValue'}" />
+          <TextBox Text="{Binding TaskList.TaskArguments.Scale, Mode=TwoWay}"
+            Watermark="{i18n:Localize 'Bee.Plugin.UmlGenerate.ScaleValue.Placeholder'}" />
+
+          <!--并发执行-->
+          <TextBlock Classes="MT-1"
+            Text="{i18n:Localize 'Task.MaxDegreeOfParallelism.Label', {Binding #MaxDegree.Value}}" />
+          <Slider x:Name="MaxDegree" Minimum="1" Maximum="32" IsSnapToTickEnabled="True"
+            TickFrequency="1"
+            Value="{Binding TaskList.TaskArguments.MaxDegreeOfParallelism, Mode=TwoWay}" />
         </StackPanel>
       </Border>
     </ctrl:Workspace.Pane>

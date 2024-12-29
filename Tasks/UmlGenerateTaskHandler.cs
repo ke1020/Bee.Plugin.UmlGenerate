@@ -1,5 +1,3 @@
-
-
 using System.Text;
 
 using Avalonia.Media.Imaging;
@@ -7,19 +5,24 @@ using Avalonia.Platform;
 
 using Bee.Base;
 using Bee.Base.Abstractions.Tasks;
+using Bee.Base.Models.Plugin;
 using Bee.Base.Models.Tasks;
+using Bee.Plugin.UmlGenerate.Builds;
 using Bee.Plugin.UmlGenerate.Models;
 
 using CliWrap;
+
+using Ke.Bee.Localization.Localizer.Abstractions;
 
 using Serilog;
 
 namespace Bee.Plugin.UmlGenerate.Tasks;
 
-public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
+public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILocalizer localizer) :
     ITaskHandler<UmlGenerateArguments>
 {
     private readonly UmlGenerateOptions _umlGenerateOptions = umlGenerateOptions;
+    private readonly ILocalizer _l = localizer;
 
     /// <summary>
     /// 生成模式创建任务列表处理器映射字典
@@ -30,7 +33,6 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
             // .puml 文件
             UmlGenerateMode.FromPumlFile, (tasks, inputPaths) =>
             {
-                using Stream stream = AssetLoader.Open(AssetConsts.Uml);
                 foreach(var path in inputPaths)
                 {
                     if(!File.Exists(path))
@@ -44,6 +46,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
                         continue;
                     }
 
+                    using Stream stream = AssetLoader.Open(AssetConsts.Uml);
                     tasks.Add(new TaskItem
                     {
                         // 任务封面图片
@@ -60,7 +63,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
             // C# 源码目录
             UmlGenerateMode.CSharpCode, (tasks, inputPaths) =>
             {
-                using Stream stream = AssetLoader.Open(AssetConsts.Folder);
+
                 foreach (var path in inputPaths)
                 {
                     if (!Directory.Exists(path))
@@ -68,28 +71,18 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
                         continue;
                     }
 
-                    var id = Guid.NewGuid().ToString();
+                    using Stream stream = AssetLoader.Open(AssetConsts.Folder);
+                    var name = Path.GetFileName(Path.GetDirectoryName(path));
                     tasks.Add(new TaskItem
                     {
                         // 任务封面图片
                         Source = new Bitmap(stream),
                         // 任务名
-                        Name = Path.GetFileName(id),
+                        Name = name,
 
                         Input = path
                     });
                 }
-            }
-        }
-    };
-
-    private readonly Dictionary<UmlGenerateMode, Action> _modeExecuteProcessors = new()
-    {
-        {
-            // .puml 文件
-            UmlGenerateMode.FromPumlFile, () =>
-            {
-
             }
         }
     };
@@ -118,7 +111,17 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
         return await Task.FromResult(tasks);
     }
 
-    public async Task<bool> ExecuteAsync(TaskItem taskItem,
+    /// <summary>
+    /// 执行任务
+    /// </summary>
+    /// <param name="taskItem"></param>
+    /// <param name="arguments"></param>
+    /// <param name="progressCallback"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="JavaPathNotSpecifiedException"></exception>
+    public async Task<Result> ExecuteAsync(TaskItem taskItem,
         UmlGenerateArguments? arguments,
         Action<double> progressCallback,
         CancellationToken cancellationToken = default)
@@ -134,115 +137,177 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
             throw new JavaPathNotSpecifiedException(nameof(_umlGenerateOptions.JavaPath));
         }
 
-        var pathName = Path.GetDirectoryName(taskItem.Input) ?? Guid.NewGuid().ToString();
-        CommandResult? r;
+        progressCallback(5);
+
+        Result r;
+        // 先从 C# 生成 .puml 文件
         if (arguments.GenerateMode == UmlGenerateMode.CSharpCode)
         {
-            r = await GeneratePumlFileFromCSharpCodeAsync(taskItem, arguments, pathName, cancellationToken);
-            if (!(r?.IsSuccess == true))
+            r = await GeneratePumlFileFromCSharpCodeAsync(taskItem, arguments, taskItem.Name!, cancellationToken);
+            if (!r.OK)
             {
-                return false;
-            }
-        }
-
-        /*
-        var argumentsObj = new UmlGenerateArgumentsBuilder()
-            .Build()
-            ;
-
-        var outputFileName = Path.Combine(arguments.OutputDirectory, $"uml{Guid.NewGuid()}.{arguments.OutputFormat}");
-
-        var argList = argumentsObj.ToCommandLine(taskItem.Input, outputFileName);
-
-        var command = Cli.Wrap(_umlGenerateOptions.PumlGenPath).WithArguments(argList);
-
-        var r = await command.ExecuteAsync(cancellationToken);
-        if (!r.IsSuccess)
-        {
-            throw new CommandExecutionException(command, r.ExitCode, string.Empty);
-        }
-
-        command = Cli.Wrap(_umlGenerateOptions.JavaPath).WithArguments(
-            [
-                "-jar",
-                $"-DPLANTUML_LIMIT_SIZE={_umlGenerateOptions.UmlLimitSize}",
-                _umlGenerateOptions.PlantumlJarPath,
-                $"-t{arguments.OutputFormat}",
-                outputFileName
-            ]);
-
-        r = await command.ExecuteAsync(cancellationToken);
-        return r.IsSuccess;
-        */
-
-        return true;
-
-        /*
-        // 输出目录
-        var outputPath = Path.Combine(umlGenerateRequest.OutputPath, PluginName);
-        // 命令参数
-        //var arguments = new StringBuilder();
-        // 命令参数构建
-        arguments.Append($"{umlGenerateRequest.InputPath} {outputPath} -dir -ignore Private,Protected -createAssociation -allInOne");
-        // 排除文件
-        if (umlGenerateRequest.ExcludeFiles?.Length > 0)
-        {
-            arguments.Append($" -excludePaths {string.Join(",", umlGenerateRequest.ExcludeFiles)}");
-        }
-
-        // 调用 puml-gen 生成 .puml 文件
-        var process = ProcessUtils.CreateProcess(umlGenerateRequest.Options.PumlGenPath, arguments.ToString());
-
-        process.Start();
-        process.WaitForExit();
-
-        // 生成成功
-        if (process.ExitCode == 0)
-        {
-            string outputType = umlGenerateRequest.OutputType.ToString()?.ToLower() ?? "png";
-
-            arguments.Clear();
-
-            var umlIncludeFile = Path.Combine(outputPath, "include.puml");
-            var startTag = "@startuml";
-            var umlIncludeString = File.ReadAllText(umlIncludeFile);
-            // 修改输出文件大小
-            if (umlIncludeString.IndexOf($"{startTag}\nscale ") == -1)
-            {
-                var sb = new StringBuilder(umlIncludeString);
-                sb.Insert(umlIncludeString.IndexOf($"{startTag}\n") + startTag.Length + 1, $"\nscale {umlGenerateRequest.Scale}");
-                File.WriteAllText(umlIncludeFile, sb.ToString());
+                return r;
             }
 
-            arguments.Append($"-jar -DPLANTUML_LIMIT_SIZE={umlGenerateRequest.Options.UmlLimitSize} {umlGenerateRequest.Options.PlantumlJarPath} -t{outputType} {umlIncludeFile}");
-            // 调用 java -jar 生成输出
-            process = ProcessUtils.CreateProcess(umlGenerateRequest.Options.JavaPath, arguments.ToString());
-            process.Start();
-            process.WaitForExit();
+            r = await GenerateFromPumlFileAsync(arguments,
+                Path.Combine(arguments.OutputDirectory, taskItem.Name!, "include.puml"),
+                cancellationToken)
+                ;
+
+            progressCallback(55);
         }
-        return true;
-        */
+        else
+        {
+            r = await GenerateFromPumlFileAsync(arguments, taskItem.Input, cancellationToken);
+        }
+
+        if (r.OK)
+        {
+            progressCallback(100);
+        }
+        return r;
     }
 
-    private async Task<CommandResult?> GeneratePumlFileFromCSharpCodeAsync(TaskItem taskItem, 
-        UmlGenerateArguments umlGenerateArguments, 
+    /// <summary>
+    /// 从 .puml 文件生成 UML
+    /// </summary>
+    /// <param name="arguments"></param>
+    /// <param name="pathName"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    private async Task<Result> GenerateFromPumlFileAsync(UmlGenerateArguments arguments,
+        string pumlFile,
+        CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(_umlGenerateOptions.JavaPath))
+        {
+            return Result.Fail(string.Format(_l["Errors.NotFound.File"], _umlGenerateOptions.JavaPath));
+        }
+
+        if (!File.Exists(_umlGenerateOptions.PlantumlJarPath))
+        {
+            return Result.Fail(string.Format(_l["Errors.NotFound.File"], _umlGenerateOptions.PlantumlJarPath));
+        }
+
+        // 如果指定了缩放选项或主题
+        if (arguments.ScaleMode != UmlScaleMode.None || !string.IsNullOrWhiteSpace(arguments.Theme))
+        {
+            // 读取 puml 文件到列表中
+            var lines = new List<string>(File.ReadLines(pumlFile));
+
+            // 缩放设置
+            var scaleValue = arguments.ScaleMode switch
+            {
+                UmlScaleMode.ByWidth => $"scale {arguments.Scale} width",
+                UmlScaleMode.ByHeight => $"scale {arguments.Scale} height",
+                _ => $"scale {arguments.Scale}"
+            };
+
+            // 是否包含 scale 设置
+            bool hasScaleLine = false;
+            // 主题
+            bool hasThemeLine = false;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].StartsWith("scale ", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasScaleLine = true;
+                    lines[i] = scaleValue;
+                }
+
+                if (lines[i].StartsWith("!theme ", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasThemeLine = true;
+                    lines[i] = $"!theme {arguments.Theme}";
+                }
+            }
+
+            if (!hasScaleLine)
+            {
+                lines.Insert(1, scaleValue);
+            }
+            if (!hasThemeLine)
+            {
+                lines.Insert(1, $"!theme {arguments.Theme}");
+            }
+
+            // 重新写回文件
+            await File.WriteAllLinesAsync(pumlFile, lines);
+        }
+
+        // 参数
+        var builder = new UmlGenerateArgumentsBuilder()
+            //.SetScaleMode(arguments.ScaleMode)
+            //.SetScale(arguments.Scale)
+            .SetOutputFormat(arguments.OutputFormat)
+            .EnableDarkMode(arguments.EnableDarkMode)
+            ;
+
+        // 构建命令行参数
+        var args = builder.BuildCommandLine(pumlFile,
+            arguments.OutputDirectory,
+            _umlGenerateOptions.PlantumlJarPath,
+            _umlGenerateOptions.UmlLimitSize)
+            ;
+
+        // Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(args));
+
+        StringBuilder stdErrBuffer = new();
+        //StringBuilder stdOutBuffer = new();
+        // 执行命令
+        var r = await Cli.Wrap(_umlGenerateOptions.JavaPath)
+            .WithArguments(args)
+            //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+            .ExecuteAsync(cancellationToken)
+            ;
+
+        if (!r.IsSuccess)
+        {
+            // 记录到日志
+            Log.Error(stdErrBuffer.ToString());
+            //Log.Error(stdOutBuffer.ToString());
+            return Result.Fail(_l["Bee.Plugin.UmlGenerate.Fail.GenerateUml"]);
+        }
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// 从 C# 源码生成 .puml 文件
+    /// </summary>
+    /// <param name="taskItem"></param>
+    /// <param name="umlGenerateArguments"></param>
+    /// <param name="pathName"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="PumlGenNotFoundException"></exception>
+    private async Task<Result> GeneratePumlFileFromCSharpCodeAsync(TaskItem taskItem,
+        UmlGenerateArguments umlGenerateArguments,
         string pathName,
         CancellationToken cancellationToken = default)
     {
+        var outputPath = Path.Combine(umlGenerateArguments.OutputDirectory, pathName);
+        var pumlFile = Path.Combine(outputPath, "include.puml");
+        if (File.Exists(pumlFile))
+        {
+            return Result.Fail(_l["Bee.Plugin.UmlGenerate.Fail.PumlFileExists"]);
+        }
+
         if (!File.Exists(_umlGenerateOptions.PumlGenPath))
         {
             throw new PumlGenNotFoundException();
         }
 
-        
-
-        var cs = new UmlGenerateFromCsharpCodeBuilder()
-            .Build()
+        var args = new UmlGenerateFromCsharpCodeBuilder()
+            .SetPublic()
+            // 去除结尾的路径分隔符 Path.DirectorySeparatorChar
+            .BuildCommandLine(taskItem.Input.TrimEnd(Path.DirectorySeparatorChar), outputPath)
             ;
 
-        var outputPath = Path.Combine(umlGenerateArguments.OutputDirectory, pathName);
-        var args = cs.ToCommandLine(taskItem.Input, outputPath);
         StringBuilder stdErrBuffer = new();
+
+        // 调用 puml-gen 生成 .puml 文件
         var r = await Cli.Wrap(_umlGenerateOptions.PumlGenPath)
             .WithArguments(args)
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
@@ -253,8 +318,9 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions) :
         {
             // 记录到日志
             Log.Error(stdErrBuffer.ToString());
+            return Result.Fail(_l["Bee.Plugin.UmlGenerate.Fail.GeneratePumlFile"]);
         }
 
-        return r;
+        return Result.Success();
     }
 }
