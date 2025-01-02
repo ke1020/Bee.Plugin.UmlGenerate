@@ -48,7 +48,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
                         continue;
                     }
 
-                    using Stream stream = AssetLoader.Open(AssetConsts.Uml);
+                    using Stream stream = AssetLoader.Open(ImageAssetConsts.Uml);
                     tasks.Add(new TaskItem
                     {
                         // 任务封面图片
@@ -73,7 +73,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
                         continue;
                     }
 
-                    using Stream stream = AssetLoader.Open(AssetConsts.Folder);
+                    using Stream stream = AssetLoader.Open(ImageAssetConsts.Folder);
                     var name = Path.GetFileName(Path.GetDirectoryName(path));
                     tasks.Add(new TaskItem
                     {
@@ -124,15 +124,11 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="JavaPathNotSpecifiedException"></exception>
     public async Task<Fin<Unit>> ExecuteAsync(TaskItem taskItem,
-        UmlGenerateArguments? arguments,
+        UmlGenerateArguments arguments,
         Action<double> progressCallback,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (arguments == null)
-        {
-            throw new ArgumentNullException(nameof(arguments));
-        }
 
         if (!File.Exists(_umlGenerateOptions.JavaPath))
         {
