@@ -5,7 +5,6 @@ using Avalonia.Platform;
 
 using Bee.Base;
 using Bee.Base.Abstractions.Tasks;
-using Bee.Base.Models.Plugin;
 using Bee.Base.Models.Tasks;
 using Bee.Plugin.UmlGenerate.Builds;
 using Bee.Plugin.UmlGenerate.Models;
@@ -13,6 +12,9 @@ using Bee.Plugin.UmlGenerate.Models;
 using CliWrap;
 
 using Ke.Bee.Localization.Localizer.Abstractions;
+
+using LanguageExt;
+using LanguageExt.Common;
 
 using Serilog;
 
@@ -121,7 +123,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="JavaPathNotSpecifiedException"></exception>
-    public async Task<Result> ExecuteAsync(TaskItem taskItem,
+    public async Task<Fin<Unit>> ExecuteAsync(TaskItem taskItem,
         UmlGenerateArguments? arguments,
         Action<double> progressCallback,
         CancellationToken cancellationToken = default)
@@ -134,17 +136,17 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
 
         if (!File.Exists(_umlGenerateOptions.JavaPath))
         {
-            throw new JavaPathNotSpecifiedException(nameof(_umlGenerateOptions.JavaPath));
+            return Fin<Unit>.Fail(new JavaPathNotSpecifiedException(nameof(_umlGenerateOptions.JavaPath)));
         }
 
         progressCallback(5);
 
-        Result r;
+        Fin<Unit> r;
         // 先从 C# 生成 .puml 文件
         if (arguments.GenerateMode == UmlGenerateMode.CSharpCode)
         {
             r = await GeneratePumlFileFromCSharpCodeAsync(taskItem, arguments, taskItem.Name!, cancellationToken);
-            if (!r.OK)
+            if (!r.IsSucc)
             {
                 return r;
             }
@@ -153,18 +155,13 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
                 Path.Combine(arguments.OutputDirectory, taskItem.Name!, "include.puml"),
                 cancellationToken)
                 ;
-
-            progressCallback(55);
         }
         else
         {
             r = await GenerateFromPumlFileAsync(arguments, taskItem.Input, cancellationToken);
         }
 
-        if (r.OK)
-        {
-            progressCallback(100);
-        }
+        r.IfSucc(r => progressCallback(100));
         return r;
     }
 
@@ -175,18 +172,18 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
     /// <param name="pathName"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    private async Task<Result> GenerateFromPumlFileAsync(UmlGenerateArguments arguments,
+    private async Task<Fin<Unit>> GenerateFromPumlFileAsync(UmlGenerateArguments arguments,
         string pumlFile,
         CancellationToken cancellationToken = default)
     {
         if (!File.Exists(_umlGenerateOptions.JavaPath))
         {
-            return Result.Fail(string.Format(_l["Errors.NotFound.File"], _umlGenerateOptions.JavaPath));
+            return Fin<Unit>.Fail(string.Format(_l["Errors.NotFound.File"], _umlGenerateOptions.JavaPath));
         }
 
         if (!File.Exists(_umlGenerateOptions.PlantumlJarPath))
         {
-            return Result.Fail(string.Format(_l["Errors.NotFound.File"], _umlGenerateOptions.PlantumlJarPath));
+            return Fin<Unit>.Fail(string.Format(_l["Errors.NotFound.File"], _umlGenerateOptions.PlantumlJarPath));
         }
 
         // 如果指定了缩放选项或主题
@@ -267,10 +264,10 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
             // 记录到日志
             Log.Error(stdErrBuffer.ToString());
             //Log.Error(stdOutBuffer.ToString());
-            return Result.Fail(_l["Bee.Plugin.UmlGenerate.Fail.GenerateUml"]);
+            return Fin<Unit>.Fail(_l["Bee.Plugin.UmlGenerate.Fail.GenerateUml"]);
         }
 
-        return Result.Success();
+        return Fin<Unit>.Succ(Unit.Default);
     }
 
     /// <summary>
@@ -282,7 +279,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     /// <exception cref="PumlGenNotFoundException"></exception>
-    private async Task<Result> GeneratePumlFileFromCSharpCodeAsync(TaskItem taskItem,
+    private async Task<Fin<Unit>> GeneratePumlFileFromCSharpCodeAsync(TaskItem taskItem,
         UmlGenerateArguments umlGenerateArguments,
         string pathName,
         CancellationToken cancellationToken = default)
@@ -291,12 +288,12 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
         var pumlFile = Path.Combine(outputPath, "include.puml");
         if (File.Exists(pumlFile))
         {
-            return Result.Fail(_l["Bee.Plugin.UmlGenerate.Fail.PumlFileExists"]);
+            return Fin<Unit>.Fail(_l["Bee.Plugin.UmlGenerate.Fail.PumlFileExists"]);
         }
 
         if (!File.Exists(_umlGenerateOptions.PumlGenPath))
         {
-            throw new PumlGenNotFoundException();
+            return Fin<Unit>.Fail(Error.New(new PumlGenNotFoundException()));
         }
 
         var args = new UmlGenerateFromCsharpCodeBuilder()
@@ -318,9 +315,9 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
         {
             // 记录到日志
             Log.Error(stdErrBuffer.ToString());
-            return Result.Fail(_l["Bee.Plugin.UmlGenerate.Fail.GeneratePumlFile"]);
+            return Fin<Unit>.Empty;
         }
 
-        return Result.Success();
+        return Fin<Unit>.Succ(Unit.Default);
     }
 }

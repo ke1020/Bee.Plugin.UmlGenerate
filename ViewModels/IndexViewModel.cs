@@ -1,4 +1,3 @@
-
 using Bee.Base.Abstractions.Tasks;
 using Bee.Base.ViewModels;
 using Bee.Plugin.UmlGenerate.Models;
@@ -35,8 +34,10 @@ public partial class IndexViewModel : WorkspaceViewModel
     /// 主题集合
     /// </summary>
     public List<string> Themes => [.. UmlGenerateConsts.AvailableThemes];
-        
-    public IndexViewModel(IServiceProvider serviceProvider, ILocalizer l, TaskListViewModel<UmlGenerateArguments> taskList) : base(serviceProvider, l)
+
+    public IndexViewModel(IServiceProvider serviceProvider,
+        ILocalizer l,
+        TaskListViewModel<UmlGenerateArguments> taskList) : base(serviceProvider, l)
     {
         IsPaneOpen = true;
         TaskList = taskList;
@@ -44,7 +45,6 @@ public partial class IndexViewModel : WorkspaceViewModel
         TaskList.SetInputExtensions(UmlGenerateConsts.AvailableInputExtensions);
     }
 
-    
     public void OnUmlGenerateModeChanged(UmlGenerateMode mode)
     {
         TaskList.SetInputExtensions(mode switch
