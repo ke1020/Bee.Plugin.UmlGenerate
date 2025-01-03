@@ -23,7 +23,7 @@ public class UmlGeneratePlugin(IServiceProvider serviceProvider) : PluginBase(se
     public override void RegisterServices(IServiceCollection services)
     {
         services.AddTransient<IPlugin, UmlGeneratePlugin>();
-        services.AddSingleton<ILocalizaitonResourceContributor, UmlGenerateLocalizationResourceContributor>();
+        services.AddSingleton<ILocalizationResourceContributor, UmlGenerateLocalizationResourceContributor>();
         services.AddSingleton<INavigationCommand, UmlGenerateNavigationCommand>();
 
         // 视图模型
