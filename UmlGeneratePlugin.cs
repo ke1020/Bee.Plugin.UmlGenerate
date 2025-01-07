@@ -26,20 +26,28 @@ public class UmlGeneratePlugin(IServiceProvider serviceProvider) : PluginBase(se
         services.AddSingleton<ILocalizationResourceContributor, UmlGenerateLocalizationResourceContributor>();
         services.AddSingleton<INavigationCommand, UmlGenerateNavigationCommand>();
 
+        // 配置 Uml 生成器
+        services.ConfigureUmlGenerate(Path.Combine(AppSettings.PluginPath, PluginName));
+
         // 视图模型
         services.AddTransient<IndexViewModel>();
         services.AddTransient<TaskListViewModel<UmlGenerateArguments>>();
 
         // 任务处理器
         services.AddTransient<ITaskHandler<UmlGenerateArguments>, UmlGenerateTaskHandler>();
-
-        ConfigureUmlGenerate(services);
     }
+}
 
-    private void ConfigureUmlGenerate(IServiceCollection services)
+internal static class ServiceExtensions
+{
+    /// <summary>
+    /// 配置生成器
+    /// </summary>
+    /// <param name="services"></param>
+    /// <param name="pluginRootPath"></param>
+    /// <returns></returns>
+    public static IServiceCollection ConfigureUmlGenerate(this IServiceCollection services, string pluginRootPath)
     {
-        // 插件根目录
-        var pluginRootPath = Path.Combine(AppSettings.PluginPath, PluginName);
         // 配置文件
         var cfg = Path.Combine(pluginRootPath, "Configs", "uml.json");
         // 文档转换配置
@@ -60,5 +68,6 @@ public class UmlGeneratePlugin(IServiceProvider serviceProvider) : PluginBase(se
         }
 
         services.AddSingleton(umlGenerateOptions);
+        return services;
     }
 }

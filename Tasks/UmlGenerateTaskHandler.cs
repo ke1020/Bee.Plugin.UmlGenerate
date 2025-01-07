@@ -4,6 +4,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
 using Bee.Base;
+using Bee.Base.Abstractions;
 using Bee.Base.Abstractions.Tasks;
 using Bee.Base.Models.Tasks;
 using Bee.Plugin.UmlGenerate.Builds;
@@ -20,8 +21,8 @@ using Serilog;
 
 namespace Bee.Plugin.UmlGenerate.Tasks;
 
-public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILocalizer localizer) :
-    ITaskHandler<UmlGenerateArguments>
+public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILocalizer localizer, ICoverHandler coverHandler) :
+    TaskHandlerBase<UmlGenerateArguments>(coverHandler)
 {
     private readonly UmlGenerateOptions _umlGenerateOptions = umlGenerateOptions;
     private readonly ILocalizer _l = localizer;
@@ -96,7 +97,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
     /// <param name="inputExtensions"></param>
     /// <param name="arguments"></param>
     /// <returns></returns>
-    public async Task<List<TaskItem>> CreateTasksFromInputPathsAsync(List<string> inputPaths,
+    public override async Task<List<TaskItem>> CreateTasksFromInputPathsAsync(List<string> inputPaths,
         IEnumerable<string>? inputExtensions = null,
         UmlGenerateArguments? arguments = null)
     {
@@ -123,7 +124,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="JavaPathNotSpecifiedException"></exception>
-    public async Task<Fin<Unit>> ExecuteAsync(TaskItem taskItem,
+    public override async Task<Fin<Unit>> ExecuteAsync(TaskItem taskItem,
         UmlGenerateArguments arguments,
         Action<double> progressCallback,
         CancellationToken cancellationToken = default)
