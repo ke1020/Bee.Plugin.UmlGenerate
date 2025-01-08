@@ -61,8 +61,9 @@ internal static class ServiceExtensions
         {
             umlGenerateOptions = new UmlGenerateOptions
             {
-                PumlGenPath = Path.Combine(pluginRootPath, "gen/puml-gen.exe"),
-                PlantumlJarPath = Path.Combine(pluginRootPath, "gen/plantuml.jar"),
+                JavaPath = Path.Combine(pluginRootPath, "packages/jdk-23.0.1/bin/java.exe"),
+                PumlGenPath = Path.Combine(pluginRootPath, "packages/puml-gen/puml-gen.exe"),
+                PlantumlJarPath = Path.Combine(pluginRootPath, "packages/plantuml.jar"),
                 UmlLimitSize = 16384
             };
         }
