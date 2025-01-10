@@ -17,15 +17,19 @@ using Ke.Bee.Localization.Localizer.Abstractions;
 using LanguageExt;
 using LanguageExt.Common;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace Bee.Plugin.UmlGenerate.Tasks;
 
-public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILocalizer localizer, ICoverHandler coverHandler) :
+public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions,
+    ILocalizer localizer,
+    ICoverHandler coverHandler,
+    ILogger<UmlGenerateTaskHandler> logger) :
     TaskHandlerBase<UmlGenerateArguments>(coverHandler)
 {
     private readonly UmlGenerateOptions _umlGenerateOptions = umlGenerateOptions;
     private readonly ILocalizer _l = localizer;
+    private readonly ILogger<UmlGenerateTaskHandler> _logger = logger;
 
     /// <summary>
     /// 生成模式创建任务列表处理器映射字典
@@ -259,8 +263,8 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
         if (!r.IsSuccess)
         {
             // 记录到日志
-            Log.Error(stdErrBuffer.ToString());
-            //Log.Error(stdOutBuffer.ToString());
+            _logger.LogError(stdErrBuffer.ToString());
+            //_logger.Error(stdOutBuffer.ToString());
             return Fin<Unit>.Fail(_l["Bee.Plugin.UmlGenerate.Fail.GenerateUml"]);
         }
 
@@ -311,7 +315,7 @@ public class UmlGenerateTaskHandler(UmlGenerateOptions umlGenerateOptions, ILoca
         if (!r.IsSuccess)
         {
             // 记录到日志
-            Log.Error(stdErrBuffer.ToString());
+            _logger.LogError(stdErrBuffer.ToString());
             return Fin<Unit>.Empty;
         }
 
